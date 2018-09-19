@@ -8,3 +8,6 @@ packages-18
 search.json
 all-packages.json
 sitemap.xml
+
+.stack-work
+run-server.eventlog

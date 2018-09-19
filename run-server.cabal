@@ -35,7 +35,7 @@ Executable run-server
     Main.hs
 
   ghc-options:
-    -threaded -O2 -W -rtsopts
+    -threaded -W -rtsopts -eventlog
 
   Build-depends:
     ansi-terminal,

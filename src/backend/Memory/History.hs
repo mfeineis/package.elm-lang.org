@@ -21,6 +21,8 @@ import qualified Data.Time.Clock as Time
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
+import qualified Debug.Trace as Trace
+
 import qualified Elm.Package as Pkg
 import qualified Json.Encode as Encode
 import qualified Package.Releases as Releases
@@ -95,13 +97,15 @@ type TimeDict =
 crawl :: IO TimeDict
 crawl =
   do  users <- getSubDirs "packages"
-      foldM crawlUser Map.empty users
+      Trace.trace ("users: " ++ show users) $
+        foldM crawlUser Map.empty users
 
 
 crawlUser :: TimeDict -> String -> IO TimeDict
 crawlUser dict user =
   do  projects <- getSubDirs ("packages" </> user)
-      foldM (crawlProject user) dict projects
+      Trace.trace ("projects: " ++ show projects) $
+        foldM (crawlProject user) dict projects
 
 
 crawlProject :: String -> TimeDict -> String -> IO TimeDict
