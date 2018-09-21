@@ -211,12 +211,13 @@ viewSidebar =
         , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Write great docs" ] ]
+        , li [] [ a [ href "/help/cats" ] [ text "Important Information About Cats" ] ]
         , li [] [ a [ href "https://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     ]
 
 
-viewPopularPackage : String -> Html msg
+viewPopularPackage : String -> Html Msg
 viewPopularPackage project =
   li []
     [ a [ href (Href.toVersion "elm" project Nothing)

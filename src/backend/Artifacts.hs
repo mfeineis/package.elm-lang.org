@@ -39,7 +39,7 @@ compile =
         Process.rawSystem "elm"
           [ "make"
           , "src/frontend/Main.elm"
-          , "--optimize"
+          --, "--optimize"
           , "--output=artifacts/elm.js"
           ]
 

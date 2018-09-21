@@ -10,7 +10,7 @@ module Page.Help exposing
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
-import Markdown
+import Utils.Markdown as Markdown
 import Session
 import Skeleton
 
@@ -83,4 +83,4 @@ viewContent title content =
       h1 [ style "max-width" "600px" ] [ text title ]
 
     Success help ->
-      Markdown.toHtml [ style "max-width" "600px" ] help
+      Markdown.unsafeBlock [ style "max-width" "600px" ] help

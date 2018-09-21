@@ -226,6 +226,8 @@ stepUrl url model =
             (stepHelp model (Help.init session "Design Guidelines" "/assets/help/design-guidelines.md"))
         , route (s "help" </> s "documentation-format")
             (stepHelp model (Help.init session "Documentation Format" "/assets/help/documentation-format.md"))
+        , route (s "help" </> s "cats")
+            (stepHelp model (Help.init session "Important Information About Cats" "/assets/help/cats.md"))
         ]
   in
   case Parser.parse parser url of
