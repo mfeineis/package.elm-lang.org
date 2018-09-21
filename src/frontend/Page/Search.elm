@@ -9,13 +9,14 @@ module Page.Search exposing
 
 import Elm.Version as V
 import Html exposing (..)
-import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
+import Html.Attributes exposing (autofocus, class, href, placeholder, src, style, value)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
 import Html.Keyed as Keyed
 import Http
 import Href
 import Json.Decode as Decode
+import Page.Search.Cat as Cat exposing (Cat)
 import Page.Search.Entry as Entry
 import Page.Problem as Problem
 import Session
@@ -31,6 +32,7 @@ type alias Model =
   { session : Session.Data
   , query : String
   , entries : Entries
+  , cat : Maybe Cat
   }
 
 
@@ -44,14 +46,17 @@ init : Session.Data -> ( Model, Cmd Msg )
 init session =
   case Session.getEntries session of
     Just entries ->
-      ( Model session "" (Success entries)
-      , Cmd.none
+      ( Model session "" (Success entries) Nothing
+      , Cat.fetchRandom GotRandomCat
       )
 
     Nothing ->
-      ( Model session "" Loading
-      , Http.send GotPackages <|
-          Http.get "/search.json" (Decode.list Entry.decoder)
+      ( Model session "" Loading Nothing
+      , Cmd.batch
+          [ Http.send GotPackages <|
+              Http.get "/search.json" (Decode.list Entry.decoder)
+          , Cat.fetchRandom GotRandomCat
+          ]
       )
 
 
@@ -62,9 +67,11 @@ init session =
 type Msg
   = QueryChanged String
   | GotPackages (Result Http.Error (List Entry.Entry))
+  | FetchRandomCat
+  | GotRandomCat (Result Http.Error Cat)
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     QueryChanged query ->
@@ -87,6 +94,19 @@ update msg model =
           , Cmd.none
           )
 
+    FetchRandomCat ->
+      ( model
+      , Cat.fetchRandom GotRandomCat
+      )
+
+    GotRandomCat (Err reason) ->
+      Debug.log ("GotRandomCat " ++ Debug.toString reason) <|
+        ( model, Cmd.none )
+
+    GotRandomCat (Ok cat) ->
+      ( { model | cat = Just cat }, Cmd.none )
+
+
 
 
 -- VIEW
@@ -99,7 +119,7 @@ view model =
   , warning = Skeleton.NoProblems
   , attrs = []
   , kids =
-      [ lazy2 viewSearch model.query model.entries
+      [ lazy3 viewSearch model.query model.entries model.cat
       , viewSidebar
       ]
   }
@@ -109,8 +129,8 @@ view model =
 -- VIEW SEARCH
 
 
-viewSearch : String -> Entries -> Html Msg
-viewSearch query entries =
+viewSearch : String -> Entries -> Maybe Cat -> Html Msg
+viewSearch query entries cat =
   div [ class "catalog" ]
     [ input
         [ placeholder "Search"
@@ -133,7 +153,7 @@ viewSearch query entries =
           in
           div []
             [ Keyed.node "div" [] <|
-                ("h", viewHint (List.isEmpty results) query) :: results
+                ("h", viewHint (List.isEmpty results) query cat) :: results
             , p [ class "pkg-hint" ]
                 [ text "Need documentation for a 0.18 package? Read "
                 , a [ href "https://gist.github.com/evancz/9031e37902dfaec250a08a7aa6e17b10" ] [ text "this" ]
@@ -147,14 +167,14 @@ viewSearch query entries =
 -- VIEW ENTRY
 
 
-viewEntry : Entry.Entry -> (String, Html msg)
+viewEntry : Entry.Entry -> (String, Html Msg)
 viewEntry entry =
   ( entry.author ++ "/" ++ entry.project
   , lazy viewEntryHelp entry
   )
 
 
-viewEntryHelp : Entry.Entry -> Html msg
+viewEntryHelp : Entry.Entry -> Html Msg
 viewEntryHelp ({ author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
@@ -170,7 +190,7 @@ viewEntryHelp ({ author, project, summary } as entry) =
     ]
 
 
-viewExactVersions : Entry.Entry -> Html msg
+viewExactVersions : Entry.Entry -> Html Msg
 viewExactVersions entry =
   let
     exactVersion v =
@@ -199,7 +219,7 @@ viewExactVersions entry =
 -- VIEW SIDEBAR
 
 
-viewSidebar : Html msg
+viewSidebar : Html Msg
 viewSidebar =
   div [ class "catalog-sidebar" ]
     [ h2 [] [ text "Popular Packages" ]
@@ -232,12 +252,12 @@ viewPopularPackage project =
 -- VIEW HINTS
 
 
-viewHint : Bool -> String -> Html msg
-viewHint noAlts query =
-  viewHintHelp noAlts (String.toLower (String.replace "-" " " query)) hints
+viewHint : Bool -> String -> Maybe Cat -> Html Msg
+viewHint noAlts query cat =
+  viewHintHelp noAlts (String.toLower (String.replace "-" " " query)) (hints cat)
 
 
-viewHintHelp : Bool -> String -> List (Hint msg) -> Html msg
+viewHintHelp : Bool -> String -> List (Hint Msg) -> Html Msg
 viewHintHelp noAlts query remainingHints =
   case remainingHints of
     [] ->
@@ -257,9 +277,10 @@ type alias Hint msg =
   }
 
 
-hints : List (Hint msg)
-hints =
-  [ Hint "spa" 3 singlePageApp
+hints : Maybe Cat -> List (Hint Msg)
+hints cat =
+  [ Hint "randomcat" 7 (randomCat cat)
+  , Hint "spa" 3 singlePageApp
   , Hint "single page app" 5 singlePageApp
   , Hint "components" 5 components
   , Hint "router" 4 router
@@ -286,6 +307,26 @@ makeHint : List (Html msg) -> Html msg
 makeHint message =
   p [ class "pkg-hint" ] <|
     b [] [ text "Hint:" ] :: text " " :: message
+
+
+randomCat : Maybe Cat -> Html Msg
+randomCat cat =
+  case cat of
+    Nothing ->
+      makeHint
+        [ text "Hmm, no cats to be found here..."
+        , br [] []
+        , button [ onClick FetchRandomCat ] [ text "Fetch new cat!" ]
+        ]
+
+    Just { height, url, width } ->
+      makeHint
+        [ text "Look at this marvelous cat!"
+        , br [] []
+        , img [ src url, style "width" width, style "height" height ] []
+        , br [] []
+        , button [ onClick FetchRandomCat ] [ text "Fetch new cat!" ]
+        ]
 
 
 singlePageApp : Html msg
